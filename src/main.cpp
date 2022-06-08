@@ -1,6 +1,4 @@
-//VERY IMPORTANT
-//to see colors in terminals add this line at the end of platformio.ini
-//monitor_flags = --raw
+
 #include <Arduino.h>
 #include "Colors.h"
 #include "IoTicosSplitter.h"
@@ -10,16 +8,16 @@
 #include <PubSubClient.h>
 
 String dId = "121212";
-String webhook_pass = "SA7sxAKDVR";
-String webhook_endpoint = "http://192.168.0.6:3001/api/getdevicecredentials";
-const char *mqtt_server = "192.168.0.6";
+String webhook_pass = "dZdqoO8X9h";
+String webhook_endpoint = "http://137.184.221.116:3001/api/getdevicecredentials";
+const char *mqtt_server = "137.184.221.116";
 
 //PINS
 #define led 2
 
 //WiFi
-const char *wifi_ssid = "GOLD2";
-const char *wifi_password = "Tesla208";
+const char *wifi_ssid = "CEGA-MORENA RUIZ";
+const char *wifi_password = "33044509";
 
 //Functions definitions
 bool get_mqtt_credentials();
@@ -43,6 +41,7 @@ String last_received_msg = "";
 String last_received_topic = "";
 int prev_temp = 0;
 int prev_hum = 0;
+int prev_pres = 0;
 
 DynamicJsonDocument mqtt_data_doc(2048);
 
@@ -93,8 +92,6 @@ void loop()
   check_mqtt_connection();
   
 }
-
-
 
 //USER FUNTIONS ⤵
 void process_sensors()
@@ -165,9 +162,6 @@ void process_actuators()
 
 }
 
-
-
-
 //TEMPLATE ⤵
 void process_incoming_msg(String topic, String incoming){
 
@@ -196,6 +190,7 @@ void process_incoming_msg(String topic, String incoming){
 
 }
 
+//callback ⤵
 void callback(char *topic, byte *payload, unsigned int length)
 {
 
@@ -212,6 +207,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 }
 
+//send data broker ⤵
 void send_data_to_broker()
 {
 
@@ -250,7 +246,7 @@ void send_data_to_broker()
     }
   }
 }
-
+//Reconnect mqtt ⤵
 bool reconnect()
 {
 
@@ -284,7 +280,7 @@ bool reconnect()
     Serial.print(boldRed + "\n\n         Mqtt Client Connection Failed :( " + fontReset);
   }
 }
-
+//Check mqtt conection ⤵
 void check_mqtt_connection()
 {
 
@@ -318,7 +314,7 @@ void check_mqtt_connection()
     print_stats();
   }
 }
-
+//get mqtt credentials⤵
 bool get_mqtt_credentials()
 {
 
