@@ -7,17 +7,16 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 
-String dId = "121212";
-String webhook_pass = "dZdqoO8X9h";
-String webhook_endpoint = "http://137.184.221.116:3001/api/getdevicecredentials";
-const char *mqtt_server = "137.184.221.116";
+String dId = "---";
+String webhook_pass = "----";
+String webhook_endpoint = "http://---.---.---.---:3001/api/getdevicecredentials";
+const char *mqtt_server = "---.---.---.---";
 
 //PINS
-#define led 2
-
+int led = 2;
 //WiFi
-const char *wifi_ssid = "CEGA-MORENA RUIZ";
-const char *wifi_password = "33044509";
+const char *wifi_ssid = "------";
+const char *wifi_password = "-------";
 
 //Functions definitions
 bool get_mqtt_credentials();
@@ -41,7 +40,6 @@ String last_received_msg = "";
 String last_received_topic = "";
 int prev_temp = 0;
 int prev_hum = 0;
-int prev_pres = 0;
 
 DynamicJsonDocument mqtt_data_doc(2048);
 
@@ -142,21 +140,21 @@ void process_sensors()
   prev_hum = hum;
 
   //get led status
-  mqtt_data_doc["variables"][4]["last"]["value"] = (HIGH == digitalRead(led));
+  mqtt_data_doc["variables"][8]["last"]["value"] = (HIGH == digitalRead(led));
 }
 
 void process_actuators()
 {
-  if (mqtt_data_doc["variables"][2]["last"]["value"] == "true")
+  if (mqtt_data_doc["variables"][0]["last"]["value"] == "true")
   {
     digitalWrite(led, HIGH);
-    mqtt_data_doc["variables"][2]["last"]["value"] = "";
+    mqtt_data_doc["variables"][0]["last"]["value"] = "";
     varsLastSend[4] = 0;
   }
-  else if (mqtt_data_doc["variables"][3]["last"]["value"] == "false")
+  else if (mqtt_data_doc["variables"][1]["last"]["value"] == "false")
   {
     digitalWrite(led, LOW);
-    mqtt_data_doc["variables"][3]["last"]["value"] = "";
+    mqtt_data_doc["variables"][1]["last"]["value"] = "";
     varsLastSend[4] = 0;
   }
 
@@ -249,7 +247,6 @@ void send_data_to_broker()
 //Reconnect mqtt ⤵
 bool reconnect()
 {
-
   if (!get_mqtt_credentials())
   {
     Serial.println(boldRed + "\n\n      Error getting mqtt credentials :( \n\n RESTARTING IN 10 SECONDS");
@@ -279,6 +276,7 @@ bool reconnect()
   {
     Serial.print(boldRed + "\n\n         Mqtt Client Connection Failed :( " + fontReset);
   }
+  return true;
 }
 //Check mqtt conection ⤵
 void check_mqtt_connection()
