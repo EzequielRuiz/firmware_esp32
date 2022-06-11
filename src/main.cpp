@@ -9,21 +9,27 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+
+String dId = "33044";
+String webhook_pass = "nb6UHOabwO";
+String webhook_endpoint = "http://137.184.221.116:3001/api/getdevicecredentials";
+const char *mqtt_server = "137.184.221.116";
+//WiFi
+const char *wifi_ssid = "CEGA-MORENA RUIZ";
+const char *wifi_password = "33044509";
+
+
+//PINS
+int r1 = 13;
+int r2 = 15;
+int r3 = 33;
+int r4 = 16;
+int r5 = 32;
+int r6 = 17;
+
 //Instancia BME280
 #define SEALEVELPRESSURE_HPA (1026.46)
 Adafruit_BME280 bme; // I2C
-unsigned long delayTime;
-
-String dId = "--------";
-String webhook_pass = "--------";
-String webhook_endpoint = "http://--------:3001/api/getdevicecredentials";
-const char *mqtt_server = "--------";
-
-//PINS
-int led = 2;
-//WiFi
-const char *wifi_ssid = "--------";
-const char *wifi_password = "--------";
 
 //Functions definitions
 bool get_mqtt_credentials();
@@ -43,7 +49,9 @@ WiFiClient espclient;
 PubSubClient client(espclient);
 IoTicosSplitter splitter;
 long lastReconnectAttemp = 0;
-long varsLastSend[20];
+long varsLastSend[25];
+long lastStats = 0;
+unsigned long delayTime;
 String last_received_msg = "";
 String last_received_topic = "";
 int prev_temp = 0;
@@ -51,13 +59,19 @@ int prev_hum = 0;
 int prev_pres = 0;
 int prev_alt = 0;
 
-DynamicJsonDocument mqtt_data_doc(2048);
+DynamicJsonDocument mqtt_data_doc(4096);
 
 void setup()
 {
 
   Serial.begin(921600);
-  pinMode(led, OUTPUT);
+  pinMode(r1, OUTPUT);
+  pinMode(r2, OUTPUT);
+  pinMode(r3, OUTPUT);
+  pinMode(r4, OUTPUT);
+  pinMode(r5, OUTPUT);
+  pinMode(r6, OUTPUT);
+
   clear();
   bool status;
 
@@ -106,8 +120,7 @@ void setup()
 
 void loop()
 {
-  check_mqtt_connection();
-  
+  check_mqtt_connection();  
 }
 
 //USER FUNTIONS ⤵
@@ -125,7 +138,7 @@ void process_sensors()
     dif_temp *= -1;
   }
 
-  if (dif_temp >= 40)
+  if (dif_temp >= 1)
   {
     mqtt_data_doc["variables"][0]["last"]["save"] = 1;
   }
@@ -147,7 +160,7 @@ void process_sensors()
     dif_hum *= -1;
   }
 
-  if (dif_hum >= 20)
+  if (dif_hum >= 2)
   {
     mqtt_data_doc["variables"][1]["last"]["save"] = 1;
   }
@@ -169,7 +182,7 @@ void process_sensors()
     dif_pres *= -1;
   }
 
-  if (dif_pres >= 100)
+  if (dif_pres >= 10)
   {
     mqtt_data_doc["variables"][2]["last"]["save"] = 1;
   }
@@ -191,7 +204,7 @@ void process_sensors()
     dif_alt *= -1;
   }
 
-  if (dif_alt >= 40)
+  if (dif_alt >= 1)
   {
     mqtt_data_doc["variables"][3]["last"]["save"] = 1;
   }
@@ -201,28 +214,91 @@ void process_sensors()
   }
 
   prev_alt = alt;
-
-
+ 
 
   //get led status
-  mqtt_data_doc["variables"][10]["last"]["value"] = (HIGH == digitalRead(led));
+
+  mqtt_data_doc["variables"][6]["last"]["value"] = (HIGH == digitalRead(r1));
+  mqtt_data_doc["variables"][9]["last"]["value"] = (HIGH == digitalRead(r2));
+  mqtt_data_doc["variables"][12]["last"]["value"] = (HIGH == digitalRead(r3));
+  mqtt_data_doc["variables"][15]["last"]["value"] = (HIGH == digitalRead(r4));
+  mqtt_data_doc["variables"][18]["last"]["value"] = (HIGH == digitalRead(r5));
+  mqtt_data_doc["variables"][21]["last"]["value"] = (HIGH == digitalRead(r6));
 }
 
-void process_actuators()
-{
+void process_actuators(){
   if (mqtt_data_doc["variables"][4]["last"]["value"] == "true")
   {
-    digitalWrite(led, HIGH);
+    digitalWrite(r1, HIGH);
     mqtt_data_doc["variables"][4]["last"]["value"] = "";
     varsLastSend[4] = 0;
   }
   else if (mqtt_data_doc["variables"][5]["last"]["value"] == "false")
   {
-    digitalWrite(led, LOW);
+    digitalWrite(r1, LOW);
     mqtt_data_doc["variables"][5]["last"]["value"] = "";
     varsLastSend[4] = 0;
   }
-
+  if (mqtt_data_doc["variables"][7]["last"]["value"] == "true")
+  {
+    digitalWrite(r2, HIGH);
+    mqtt_data_doc["variables"][7]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  else if (mqtt_data_doc["variables"][8]["last"]["value"] == "false")
+  {
+    digitalWrite(r2, LOW);
+    mqtt_data_doc["variables"][8]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  } 
+  if (mqtt_data_doc["variables"][10]["last"]["value"] == "true")
+  {
+    digitalWrite(r3, HIGH);
+    mqtt_data_doc["variables"][10]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  else if (mqtt_data_doc["variables"][11]["last"]["value"] == "false")
+  {
+    digitalWrite(r3, LOW);
+    mqtt_data_doc["variables"][11]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  if (mqtt_data_doc["variables"][13]["last"]["value"] == "true")
+  {
+    digitalWrite(r4, HIGH);
+    mqtt_data_doc["variables"][13]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  else if (mqtt_data_doc["variables"][14]["last"]["value"] == "false")
+  {
+    digitalWrite(r4, LOW);
+    mqtt_data_doc["variables"][14]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  if (mqtt_data_doc["variables"][16]["last"]["value"] == "true")
+  {
+    digitalWrite(r5, HIGH);
+    mqtt_data_doc["variables"][16]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  else if (mqtt_data_doc["variables"][17]["last"]["value"] == "false")
+  {
+    digitalWrite(r5, LOW);
+    mqtt_data_doc["variables"][17]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  } 
+  if (mqtt_data_doc["variables"][19]["last"]["value"] == "true")
+  {
+    digitalWrite(r6, HIGH);
+    mqtt_data_doc["variables"][19]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
+  else if (mqtt_data_doc["variables"][20]["last"]["value"] == "false")
+  {
+    digitalWrite(r6, LOW);
+    mqtt_data_doc["variables"][20]["last"]["value"] = "";
+    varsLastSend[4] = 0;
+  }
 }
 
 //TEMPLATE ⤵
@@ -237,7 +313,7 @@ void process_incoming_msg(String topic, String incoming){
 
     if (mqtt_data_doc["variables"][i]["variable"] == variable){
       
-      DynamicJsonDocument doc(256);
+      DynamicJsonDocument doc(512);
       deserializeJson(doc, incoming);
       mqtt_data_doc["variables"][i]["last"] = doc;
 
@@ -431,7 +507,6 @@ void clear()
   Serial.print("[H"); // cursor to home command
 }
 
-long lastStats = 0;
 void print_stats()
 
 {
