@@ -6,17 +6,24 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 
-String dId = "---";
-String webhook_pass = "----";
-String webhook_endpoint = "http://---.---.---.---:3001/api/getdevicecredentials";
-const char *mqtt_server = "---.---.---.---";
+//Instancia BME280
+#define SEALEVELPRESSURE_HPA (1026.46)
+Adafruit_BME280 bme; // I2C
+unsigned long delayTime;
+
+String dId = "--------";
+String webhook_pass = "--------";
+String webhook_endpoint = "http://--------:3001/api/getdevicecredentials";
+const char *mqtt_server = "--------";
 
 //PINS
 int led = 2;
 //WiFi
-const char *wifi_ssid = "------";
-const char *wifi_password = "-------";
+const char *wifi_ssid = "--------";
+const char *wifi_password = "--------";
 
 //Functions definitions
 bool get_mqtt_credentials();
@@ -28,6 +35,7 @@ void send_data_to_broker();
 void callback(char *topic, byte *payload, unsigned int length);
 void process_incoming_msg(String topic, String incoming);
 void print_stats();
+void getvalues();
 void clear();
 
 //Global Vars
@@ -40,6 +48,8 @@ String last_received_msg = "";
 String last_received_topic = "";
 int prev_temp = 0;
 int prev_hum = 0;
+int prev_pres = 0;
+int prev_alt = 0;
 
 DynamicJsonDocument mqtt_data_doc(2048);
 
@@ -49,6 +59,7 @@ void setup()
   Serial.begin(921600);
   pinMode(led, OUTPUT);
   clear();
+  bool status;
 
   Serial.print(underlinePurple + "\n\n\nWiFi Connection in Progress" + fontReset + Purple);
 
@@ -80,6 +91,14 @@ void setup()
   Serial.print(boldBlue);
   Serial.print(WiFi.localIP());
   Serial.println(fontReset);
+  Serial.print(underlinePurple + "\n\n\nTest Sensor BME280 ⤵" + fontReset + Purple);
+  status = bme.begin(0x76);  
+  if (!status) {
+    Serial.println(boldGreen + "\n\n Could not find a valid BME280 sensor, check wiring!"+ fontReset);
+    while (1);
+  }else Serial.println(boldGreen + "\n\n Test SENSOR OK :)"+ fontReset);  
+  delayTime = 1000;
+  
 
   client.setCallback(callback);
 
@@ -94,19 +113,19 @@ void loop()
 //USER FUNTIONS ⤵
 void process_sensors()
 {
-
-  //get temp simulation
-  int temp = random(1, 100);
+  
+  //get temp 
+  int temp = round(bme.readTemperature());
   mqtt_data_doc["variables"][0]["last"]["value"] = temp;
 
   //save temp?
-  int dif = temp - prev_temp;
-  if (dif < 0)
+  int dif_temp = temp - prev_temp;
+  if (dif_temp < 0)
   {
-    dif *= -1;
+    dif_temp *= -1;
   }
 
-  if (dif >= 40)
+  if (dif_temp >= 40)
   {
     mqtt_data_doc["variables"][0]["last"]["save"] = 1;
   }
@@ -117,18 +136,18 @@ void process_sensors()
 
   prev_temp = temp;
 
-  //get humidity simulation
-  int hum = random(1, 50);
+  //get humidity
+  int hum = bme.readHumidity();
   mqtt_data_doc["variables"][1]["last"]["value"] = hum;
 
   //save hum?
-  dif = hum - prev_hum;
-  if (dif < 0)
+  int dif_hum = hum - prev_hum;
+  if (dif_hum < 0)
   {
-    dif *= -1;
+    dif_hum *= -1;
   }
 
-  if (dif >= 20)
+  if (dif_hum >= 20)
   {
     mqtt_data_doc["variables"][1]["last"]["save"] = 1;
   }
@@ -139,22 +158,68 @@ void process_sensors()
 
   prev_hum = hum;
 
+  //get press
+  int pres = bme.readPressure() / 100.0F;
+  mqtt_data_doc["variables"][2]["last"]["value"] = pres;
+
+  //save pres?
+  int dif_pres = pres - prev_pres;
+  if (dif_pres < 0)
+  {
+    dif_pres *= -1;
+  }
+
+  if (dif_pres >= 100)
+  {
+    mqtt_data_doc["variables"][2]["last"]["save"] = 1;
+  }
+  else
+  {
+    mqtt_data_doc["variables"][2]["last"]["save"] = 0;
+  }
+
+  prev_pres = pres;
+
+  // get Altitud 
+  int alt = bme.readAltitude(SEALEVELPRESSURE_HPA);
+  mqtt_data_doc["variables"][3]["last"]["value"] = alt;
+
+  //save temp?
+  int dif_alt = alt - prev_alt;
+  if (dif_alt < 0)
+  {
+    dif_alt *= -1;
+  }
+
+  if (dif_alt >= 40)
+  {
+    mqtt_data_doc["variables"][3]["last"]["save"] = 1;
+  }
+  else
+  {
+    mqtt_data_doc["variables"][3]["last"]["save"] = 0;
+  }
+
+  prev_alt = alt;
+
+
+
   //get led status
-  mqtt_data_doc["variables"][8]["last"]["value"] = (HIGH == digitalRead(led));
+  mqtt_data_doc["variables"][10]["last"]["value"] = (HIGH == digitalRead(led));
 }
 
 void process_actuators()
 {
-  if (mqtt_data_doc["variables"][0]["last"]["value"] == "true")
+  if (mqtt_data_doc["variables"][4]["last"]["value"] == "true")
   {
     digitalWrite(led, HIGH);
-    mqtt_data_doc["variables"][0]["last"]["value"] = "";
+    mqtt_data_doc["variables"][4]["last"]["value"] = "";
     varsLastSend[4] = 0;
   }
-  else if (mqtt_data_doc["variables"][1]["last"]["value"] == "false")
+  else if (mqtt_data_doc["variables"][5]["last"]["value"] == "false")
   {
     digitalWrite(led, LOW);
-    mqtt_data_doc["variables"][1]["last"]["value"] = "";
+    mqtt_data_doc["variables"][5]["last"]["value"] = "";
     varsLastSend[4] = 0;
   }
 
@@ -244,6 +309,7 @@ void send_data_to_broker()
     }
   }
 }
+
 //Reconnect mqtt ⤵
 bool reconnect()
 {
@@ -278,6 +344,7 @@ bool reconnect()
   }
   return true;
 }
+
 //Check mqtt conection ⤵
 void check_mqtt_connection()
 {
@@ -312,6 +379,7 @@ void check_mqtt_connection()
     print_stats();
   }
 }
+
 //get mqtt credentials⤵
 bool get_mqtt_credentials()
 {
@@ -364,8 +432,8 @@ void clear()
 }
 
 long lastStats = 0;
-
 void print_stats()
+
 {
   long now = millis();
 
@@ -395,7 +463,7 @@ void print_stats()
       Serial.println(String(i) + " \t " + variableFullName.substring(0,5) + " \t\t " + variable.substring(0,10) + " \t " + variableType.substring(0,5) + " \t\t " + String(counter).substring(0,10) + " \t\t " + lastMsg);
     }
 
-    Serial.print(boldGreen + "\n\n Free RAM -> " + fontReset + ESP.getFreeHeap() + " Bytes");
+    Serial.print(boldGreen + "\n\n Free RAM -> " + fontReset + (ESP.getFreeHeap()/1000) + " KB of 320KB");
 
     Serial.print(boldGreen + "\n\n Last Incomming Msg -> " + fontReset + last_received_msg);
   }
